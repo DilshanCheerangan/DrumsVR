@@ -141,6 +141,9 @@ const playCymbal = (velocity = 1, type = 'crash') => {
 };
 
 const playSound = (type, velocity = 1.0) => {
+    // Boost global velocity
+    velocity = velocity * 2.5;
+
     // Browsers require user interaction to start audio, A-Frame handles this partially on Enter VR, but ensure it's resumed
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
@@ -203,7 +206,8 @@ AFRAME.registerComponent('drumstick', {
 // A-Frame: Drum component for hit detection and visual response
 AFRAME.registerComponent('drum', {
     schema: {
-        type: { type: 'string', default: 'snare' }
+        type: { type: 'string', default: 'snare' },
+        hitRadius: { type: 'number', default: 0.22 } // Radius in meters for spherical collision
     },
     init: function () {
         this.hitCooldowns = new Map();
@@ -234,9 +238,9 @@ AFRAME.registerComponent('drum', {
             this.sticks = Array.from(this.el.sceneEl.querySelectorAll('[drumstick]'));
         }
 
-        // Create bounding box expanded to catch fast drum hits
-        const bbox = new THREE.Box3().setFromObject(this.el.object3D);
-        bbox.expandByScalar(0.06); // 6cm margin
+        const drumPos = this.el.object3D.getWorldPosition(new THREE.Vector3());
+        // Expand radius slightly to ensure even fast tangential hits trigger
+        const radiusHit = this.data.hitRadius * 1.25;
 
         this.sticks.forEach(stick => {
             const stickComp = stick.components.drumstick;
@@ -253,17 +257,21 @@ AFRAME.registerComponent('drum', {
             const currPos = stickComp.currentPos;
             const prevPos = stickComp.prevPos;
 
-            // Fast Controller Support: Sample midpoint between frames to catch swings that travel entirely through drums in 1 tick
+            // Fast Controller Support: Sample midpoint between frames to catch swings
             const midPos = new THREE.Vector3().addVectors(prevPos, currPos).multiplyScalar(0.5);
 
-            const isHitNow = bbox.containsPoint(currPos) || bbox.containsPoint(prevPos) || bbox.containsPoint(midPos);
+            // Spherical collision is EXTREMELY robust in VR compared to thin bounding boxes
+            const isHitNow = (drumPos.distanceTo(currPos) <= radiusHit) ||
+                (drumPos.distanceTo(prevPos) <= radiusHit) ||
+                (drumPos.distanceTo(midPos) <= radiusHit);
 
             if (isHitNow) {
                 // Determine if this is a new hit
                 if (!this.isBeingHit.get(stickId) && cooldown <= 0) {
                     // Trigger sound
                     let rawVel = stickComp.velocity || 0;
-                    let velocityVolume = Math.min(Math.max(rawVel / 3.0, 0.2), 1.5);
+                    // Increase the volume mapping for VR swings significantly
+                    let velocityVolume = Math.min(Math.max(rawVel / 1.5, 0.4), 2.5);
 
                     if (audioCtx.state === 'suspended') audioCtx.resume();
                     playSound(this.data.type, velocityVolume);
