@@ -83,8 +83,13 @@
             <a-entity id="leftHand" laser-controls="hand: left" drumstick="hand: left">
                 <!-- Drumstick Visual (Stick extends forward from controller) -->
                 <a-cylinder radius="0.008" height="0.4" position="0 0.05 -0.2" rotation="90 0 0" color="#d9b38c">
-                    <!-- The tip is explicitly at the top of the cylinder (+0.2 on local Y since height is 0.4) -->
-                    <a-sphere class="stick-tip" radius="0.015" position="0 0.2 0" color="#f2e6d9"></a-sphere>
+                    <!-- Nodes spread along the stick length for full-body hit detection -->
+                    <!-- Local Y ranges from -0.2 (tip) to 0.2 (controller handle) -->
+                    <a-sphere class="stick-node" radius="0.015" position="0 -0.2 0" color="#f2e6d9"></a-sphere>
+                    <a-entity class="stick-node" position="0 -0.1 0"></a-entity>
+                    <a-entity class="stick-node" position="0 0.0 0"></a-entity>
+                    <a-entity class="stick-node" position="0 0.1 0"></a-entity>
+                    <a-entity class="stick-node" position="0 0.2 0"></a-entity>
                 </a-cylinder>
             </a-entity>
 
@@ -92,7 +97,11 @@
             <a-entity id="rightHand" laser-controls="hand: right" drumstick="hand: right">
                 <!-- Drumstick Visual -->
                 <a-cylinder radius="0.008" height="0.4" position="0 0.05 -0.2" rotation="90 0 0" color="#d9b38c">
-                    <a-sphere class="stick-tip" radius="0.015" position="0 0.2 0" color="#f2e6d9"></a-sphere>
+                    <a-sphere class="stick-node" radius="0.015" position="0 -0.2 0" color="#f2e6d9"></a-sphere>
+                    <a-entity class="stick-node" position="0 -0.1 0"></a-entity>
+                    <a-entity class="stick-node" position="0 0.0 0"></a-entity>
+                    <a-entity class="stick-node" position="0 0.1 0"></a-entity>
+                    <a-entity class="stick-node" position="0 0.2 0"></a-entity>
                 </a-cylinder>
             </a-entity>
         </a-entity>

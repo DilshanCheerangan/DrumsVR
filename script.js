@@ -214,8 +214,9 @@ AFRAME.registerComponent('drumstick', {
         hand: { type: 'string', default: 'right' }
     },
     init: function () {
-        this.currentPos = new THREE.Vector3();
-        this.prevPos = new THREE.Vector3();
+        this.nodes = [];
+        this.currentPositions = [];
+        this.prevPositions = [];
         this.velocity = 0;
         this.hasInitialized = false;
 
@@ -228,26 +229,38 @@ AFRAME.registerComponent('drumstick', {
         });
     },
     tick: function (time, delta) {
-        if (!this.tip) {
-            this.tip = this.el.querySelector('.stick-tip');
-            if (!this.tip) return;
+        if (this.nodes.length === 0) {
+            this.nodes = Array.from(this.el.querySelectorAll('.stick-node'));
+            if (this.nodes.length === 0) return;
+
+            this.nodes.forEach(() => {
+                this.currentPositions.push(new THREE.Vector3());
+                this.prevPositions.push(new THREE.Vector3());
+            });
         }
 
-        this.tip.object3D.getWorldPosition(this.currentPos);
+        let totalVelocity = 0;
+        const dt = delta / 1000;
+
+        for (let i = 0; i < this.nodes.length; i++) {
+            this.nodes[i].object3D.getWorldPosition(this.currentPositions[i]);
+
+            if (!this.hasInitialized) {
+                this.prevPositions[i].copy(this.currentPositions[i]);
+            } else if (dt > 0) {
+                totalVelocity += this.currentPositions[i].distanceTo(this.prevPositions[i]) / dt;
+            }
+        }
 
         if (!this.hasInitialized) {
-            this.prevPos.copy(this.currentPos);
             this.hasInitialized = true;
             return;
         }
 
-        const dt = delta / 1000;
         if (dt > 0) {
-            this.velocity = this.currentPos.distanceTo(this.prevPos) / dt;
+            // Average velocity across all stick length points
+            this.velocity = totalVelocity / this.nodes.length;
         }
-
-        // Expose data efficiently directly on the component class instance
-        // Removed slow setAttribute calls to allow 90+ FPS in VR headsets.
     }
 });
 
@@ -303,7 +316,7 @@ AFRAME.registerComponent('drum', {
 
         this.sticks.forEach(stick => {
             const stickComp = stick.components.drumstick;
-            if (!stickComp || !stickComp.hasInitialized) return;
+            if (!stickComp || !stickComp.hasInitialized || stickComp.nodes.length === 0) return;
 
             const stickId = stick.id || stickComp.data.hand;
 
@@ -313,14 +326,24 @@ AFRAME.registerComponent('drum', {
                 this.hitCooldowns.set(stickId, cooldown - delta);
             }
 
-            const currPos = stickComp.currentPos;
-            const prevPos = stickComp.prevPos;
+            let isHitNow = false;
+            let hitPos = null;
 
-            // Fast Controller Support: Sample midpoint between frames to catch swings
-            const midPos = new THREE.Vector3().addVectors(prevPos, currPos).multiplyScalar(0.5);
+            // Check collision against all nodes along the entire stick
+            for (let i = 0; i < stickComp.currentPositions.length; i++) {
+                const currPos = stickComp.currentPositions[i];
+                const prevPos = stickComp.prevPositions[i];
 
-            // Strict Cylindrical Collision provides exactly perfect surface hits
-            const isHitNow = checkLocalHit(currPos) || checkLocalHit(prevPos) || checkLocalHit(midPos);
+                // Fast Controller Support: Sample midpoint between frames to catch swings
+                const midPos = new THREE.Vector3().addVectors(prevPos, currPos).multiplyScalar(0.5);
+
+                // Strict Cylindrical Collision provides exactly perfect surface hits
+                if (checkLocalHit(currPos) || checkLocalHit(prevPos) || checkLocalHit(midPos)) {
+                    isHitNow = true;
+                    hitPos = currPos; // Record exactly where the collision occurred on the stick
+                    break;
+                }
+            }
 
             if (isHitNow) {
                 // Determine if this is a new hit
@@ -341,8 +364,10 @@ AFRAME.registerComponent('drum', {
                         fxColor = '#ff4444'; // Red for kick
                     }
 
-                    // Trigger impact visual effect at the exact stick tip position
-                    createHitEffect(currPos, fxColor);
+                    // Trigger impact visual effect at the exact node position that hit
+                    if (hitPos) {
+                        createHitEffect(hitPos, fxColor);
+                    }
 
                     // Trigger visual feedback on the drum itself
                     this.el.emit('drum-hit', null, false);
@@ -356,7 +381,9 @@ AFRAME.registerComponent('drum', {
             }
 
             // Advance prevPos inside drum tick to ensure drum checking finishes before stick updates it
-            stickComp.prevPos.copy(currPos);
+            for (let i = 0; i < stickComp.currentPositions.length; i++) {
+                stickComp.prevPositions[i].copy(stickComp.currentPositions[i]);
+            }
         });
     }
 });
