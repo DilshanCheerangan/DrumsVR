@@ -162,27 +162,41 @@ AFRAME.registerComponent('drumstick', {
     schema: {
         hand: { type: 'string', default: 'right' }
     },
-    tick: function () {
-        const tip = this.el.querySelector('.stick-tip');
-        if (!tip) return;
+    init: function () {
+        this.currentPos = new THREE.Vector3();
+        this.prevPos = new THREE.Vector3();
+        this.velocity = 0;
+        this.hasInitialized = false;
 
-        const currentPos = new THREE.Vector3();
-        tip.object3D.getWorldPosition(currentPos);
+        // Wake up audio on controller interactions in VR
+        this.el.addEventListener('triggerdown', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        });
+        this.el.addEventListener('gripdown', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        });
+    },
+    tick: function (time, delta) {
+        if (!this.tip) {
+            this.tip = this.el.querySelector('.stick-tip');
+            if (!this.tip) return;
+        }
 
-        if (!this.prevPos) {
-            this.prevPos = currentPos.clone();
+        this.tip.object3D.getWorldPosition(this.currentPos);
+
+        if (!this.hasInitialized) {
+            this.prevPos.copy(this.currentPos);
+            this.hasInitialized = true;
             return;
         }
 
-        const delta = this.el.sceneEl.delta || 16;
-        const velocity = currentPos.distanceTo(this.prevPos) / (delta / 1000);
+        const dt = delta / 1000;
+        if (dt > 0) {
+            this.velocity = this.currentPos.distanceTo(this.prevPos) / dt;
+        }
 
-        // Expose velocity and positions to be read by drums
-        this.el.setAttribute('data-velocity', velocity);
-        this.el.setAttribute('data-prev-pos', AFRAME.utils.coordinates.stringify(this.prevPos));
-        this.el.setAttribute('data-curr-pos', AFRAME.utils.coordinates.stringify(currentPos));
-
-        this.prevPos.copy(currentPos);
+        // Expose data efficiently directly on the component class instance
+        // Removed slow setAttribute calls to allow 90+ FPS in VR headsets.
     }
 });
 
@@ -216,44 +230,46 @@ AFRAME.registerComponent('drum', {
         }
     },
     tick: function (time, delta) {
-        const sticks = document.querySelectorAll('[drumstick]');
+        if (!this.sticks || this.sticks.length === 0) {
+            this.sticks = Array.from(this.el.sceneEl.querySelectorAll('[drumstick]'));
+        }
 
-        // Create an accurate bounding box each frame (drums shouldn't move, but just in case)
+        // Create bounding box expanded to catch fast drum hits
         const bbox = new THREE.Box3().setFromObject(this.el.object3D);
-        bbox.expandByScalar(0.04); // Slightly larger hit area for easier drumming
+        bbox.expandByScalar(0.06); // 6cm margin
 
-        sticks.forEach(stick => {
-            const stickId = stick.id || stick.getAttribute('drumstick').hand;
+        this.sticks.forEach(stick => {
+            const stickComp = stick.components.drumstick;
+            if (!stickComp || !stickComp.hasInitialized) return;
+
+            const stickId = stick.id || stickComp.data.hand;
 
             // Check specific stick cooldown
             let cooldown = this.hitCooldowns.get(stickId) || 0;
             if (cooldown > 0) {
                 this.hitCooldowns.set(stickId, cooldown - delta);
-                return;
             }
 
-            const currPosStr = stick.getAttribute('data-curr-pos');
-            if (!currPosStr) return;
+            const currPos = stickComp.currentPos;
+            const prevPos = stickComp.prevPos;
 
-            const currPos = AFRAME.utils.coordinates.parse(currPosStr);
-            const stickVec = new THREE.Vector3(currPos.x, currPos.y, currPos.z);
+            // Fast Controller Support: Sample midpoint between frames to catch swings that travel entirely through drums in 1 tick
+            const midPos = new THREE.Vector3().addVectors(prevPos, currPos).multiplyScalar(0.5);
 
-            if (bbox.containsPoint(stickVec)) {
+            const isHitNow = bbox.containsPoint(currPos) || bbox.containsPoint(prevPos) || bbox.containsPoint(midPos);
+
+            if (isHitNow) {
                 // Determine if this is a new hit
-                if (!this.isBeingHit.get(stickId)) {
+                if (!this.isBeingHit.get(stickId) && cooldown <= 0) {
                     // Trigger sound
-                    let rawVel = parseFloat(stick.getAttribute('data-velocity')) || 0;
-
-                    // The faster the controller moves, the stronger the drum hit
-                    // Map raw speed (m/s) to 0.1 - 1.5 range
+                    let rawVel = stickComp.velocity || 0;
                     let velocityVolume = Math.min(Math.max(rawVel / 3.0, 0.2), 1.5);
 
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
                     playSound(this.data.type, velocityVolume);
 
                     // Trigger visual feedback
                     this.el.emit('drum-hit', null, false);
-
-                    // Reset animation slightly to ensure re-triggering looks good
                     this.el.object3D.scale.set(1, 1, 1);
 
                     this.hitCooldowns.set(stickId, 100); // 100ms cooldown per stick
@@ -262,6 +278,9 @@ AFRAME.registerComponent('drum', {
             } else {
                 this.isBeingHit.set(stickId, false);
             }
+
+            // Advance prevPos inside drum tick to ensure drum checking finishes before stick updates it
+            stickComp.prevPos.copy(currPos);
         });
     }
 });
@@ -272,6 +291,10 @@ document.addEventListener('click', () => {
         audioCtx.resume();
     }
 }, { once: true });
+
+window.addEventListener('enter-vr', () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+});
 
 // Provide keyboard fallbacks for testing on desktop
 window.addEventListener('keydown', (e) => {
