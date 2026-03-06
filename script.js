@@ -255,7 +255,8 @@ AFRAME.registerComponent('drumstick', {
 AFRAME.registerComponent('drum', {
     schema: {
         type: { type: 'string', default: 'snare' },
-        hitRadius: { type: 'number', default: 0.22 } // Radius in meters for spherical collision
+        hitRadius: { type: 'number', default: 0.22 }, // Radius bounds for cylindrical collision
+        hitHeight: { type: 'number', default: 0.1 }   // Height bounds for cylindrical collision
     },
     init: function () {
         this.hitCooldowns = new Map();
@@ -286,9 +287,19 @@ AFRAME.registerComponent('drum', {
             this.sticks = Array.from(this.el.sceneEl.querySelectorAll('[drumstick]'));
         }
 
-        const drumPos = this.el.object3D.getWorldPosition(new THREE.Vector3());
-        // Expand radius slightly to ensure even fast tangential hits trigger
-        const radiusHit = this.data.hitRadius * 1.25;
+        // Cache the inverse world matrix to convert stick tip to drum's local coordinate space
+        const worldToLocal = new THREE.Matrix4().copy(this.el.object3D.matrixWorld).invert();
+
+        const checkLocalHit = (worldPos) => {
+            const localPos = worldPos.clone().applyMatrix4(worldToLocal);
+            const radiusSq = localPos.x * localPos.x + localPos.z * localPos.z;
+
+            // Allow a 5cm vertical margin above/below the visual drum height
+            const heightLimit = (this.data.hitHeight / 2) + 0.05;
+
+            return (radiusSq <= this.data.hitRadius * this.data.hitRadius) &&
+                (Math.abs(localPos.y) <= heightLimit);
+        };
 
         this.sticks.forEach(stick => {
             const stickComp = stick.components.drumstick;
@@ -308,10 +319,8 @@ AFRAME.registerComponent('drum', {
             // Fast Controller Support: Sample midpoint between frames to catch swings
             const midPos = new THREE.Vector3().addVectors(prevPos, currPos).multiplyScalar(0.5);
 
-            // Spherical collision is EXTREMELY robust in VR compared to thin bounding boxes
-            const isHitNow = (drumPos.distanceTo(currPos) <= radiusHit) ||
-                (drumPos.distanceTo(prevPos) <= radiusHit) ||
-                (drumPos.distanceTo(midPos) <= radiusHit);
+            // Strict Cylindrical Collision provides exactly perfect surface hits
+            const isHitNow = checkLocalHit(currPos) || checkLocalHit(prevPos) || checkLocalHit(midPos);
 
             if (isHitNow) {
                 // Determine if this is a new hit
