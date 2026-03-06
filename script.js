@@ -140,6 +140,54 @@ const playCymbal = (velocity = 1, type = 'crash') => {
     source.start(audioCtx.currentTime);
 };
 
+// Visual Effect generation on hit
+const createHitEffect = (position, color = '#4facfe') => {
+    const scene = document.querySelector('a-scene');
+    if (!scene) return;
+
+    // Create a ring
+    const ring = document.createElement('a-ring');
+    ring.setAttribute('radius-inner', '0.01');
+    ring.setAttribute('radius-outer', '0.03');
+    ring.setAttribute('color', color);
+    ring.setAttribute('material', 'shader: flat; transparent: true; opacity: 1');
+
+    // Position it at the collision point
+    ring.setAttribute('position', position);
+
+    // Face the user (roughly)
+    const camera = document.querySelector('#head');
+    if (camera) {
+        const camPos = new THREE.Vector3();
+        camera.object3D.getWorldPosition(camPos);
+        ring.object3D.lookAt(camPos);
+    }
+
+    // Animate expansion and fade out
+    ring.setAttribute('animation__scale', {
+        property: 'scale',
+        to: '5 5 5',
+        dur: 300,
+        easing: 'easeOutQuad'
+    });
+
+    ring.setAttribute('animation__fade', {
+        property: 'material.opacity',
+        to: '0',
+        dur: 300,
+        easing: 'easeOutQuad'
+    });
+
+    scene.appendChild(ring);
+
+    // Clean up after animation finishes
+    setTimeout(() => {
+        if (ring.parentNode) {
+            ring.parentNode.removeChild(ring);
+        }
+    }, 350);
+};
+
 const playSound = (type, velocity = 1.0) => {
     // Boost global velocity
     velocity = velocity * 2.5;
@@ -276,7 +324,18 @@ AFRAME.registerComponent('drum', {
                     if (audioCtx.state === 'suspended') audioCtx.resume();
                     playSound(this.data.type, velocityVolume);
 
-                    // Trigger visual feedback
+                    // Determine effect color based on drum type
+                    let fxColor = '#4facfe'; // Default cyan
+                    if (this.data.type === 'crash' || this.data.type === 'ride' || this.data.type === 'hihat') {
+                        fxColor = '#ffdd44'; // Gold for cymbals
+                    } else if (this.data.type === 'kick') {
+                        fxColor = '#ff4444'; // Red for kick
+                    }
+
+                    // Trigger impact visual effect at the exact stick tip position
+                    createHitEffect(currPos, fxColor);
+
+                    // Trigger visual feedback on the drum itself
                     this.el.emit('drum-hit', null, false);
                     this.el.object3D.scale.set(1, 1, 1);
 
@@ -328,6 +387,18 @@ window.addEventListener('keydown', (e) => {
         const drumEl = document.querySelector(`[drum="type: ${drumType}"]`);
         if (drumEl) {
             drumEl.emit('drum-hit', null, false);
+
+            // Generate visual effect above the drum for keyboard testing
+            const drumPos = new THREE.Vector3();
+            drumEl.object3D.getWorldPosition(drumPos);
+            drumPos.y += 0.1; // Slightly above
+
+            let fxColor = '#4facfe';
+            if (drumType === 'crash' || drumType === 'ride' || drumType === 'hihat') fxColor = '#ffdd44';
+            else if (drumType === 'kick') fxColor = '#ff4444';
+
+            createHitEffect(drumPos, fxColor);
+
             // Reset scale/rotation slightly to allow rapid re-trigger animations
             if (drumType === 'crash' || drumType === 'ride' || drumType === 'hihat') {
                 const rot = drumEl.object3D.rotation; // Get original/current before emitting might be complex, just rely on animation
