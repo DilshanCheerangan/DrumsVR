@@ -22,8 +22,12 @@ html {
     padding: 30px;
     box-sizing: border-box;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    /* Stack vertically */
+    justify-content: flex-start;
     align-items: flex-start;
+    gap: 15px;
+    /* Add spacing between panels */
 }
 
 .glass-panel {
@@ -46,7 +50,162 @@ html {
 
 .controls-panel {
     max-width: 280px;
-    transform: translateX(30px);
+    transform: translateX(-30px);
+}
+
+.tool-panel {
+    max-width: 350px;
+    transform: translateX(-30px);
+}
+
+.tools-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.tool-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: white;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: center;
+}
+
+.action-btn:hover:not(:disabled) {
+    background: rgba(79, 172, 254, 0.3);
+    border-color: #4facfe;
+    box-shadow: 0 0 10px rgba(79, 172, 254, 0.3);
+}
+
+.action-btn.active {
+    background: rgba(79, 172, 254, 0.5);
+    border-color: #4facfe;
+    box-shadow: 0 0 15px rgba(79, 172, 254, 0.5);
+}
+
+.action-btn.record:hover:not(:disabled) {
+    background: rgba(255, 68, 68, 0.3);
+    border-color: #ff4444;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+.action-btn.record.recording {
+    background: rgba(255, 68, 68, 0.5);
+    border-color: #ff4444;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+    animation: pulseRecord 1.5s infinite;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.indicator-light {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin-top: 5px;
+    transition: background 0.1s;
+}
+
+input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    width: 60%;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background: #4facfe;
+    cursor: pointer;
+    margin-top: -6px;
+    box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.styled-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: white;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+    width: 130px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.styled-select option {
+    background: #2a2a35;
+    color: white;
+}
+
+.highlight-panel {
+    border: 1px solid rgba(79, 172, 254, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(79, 172, 254, 0.1), inset 0 0 0 1px rgba(79, 172, 254, 0.2);
+}
+
+.trainer-stats {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 48%;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #00f2fe;
 }
 
 .glow-text {
@@ -59,6 +218,22 @@ html {
     background-clip: text;
     -webkit-text-fill-color: transparent;
     text-shadow: 0 0 30px rgba(0, 242, 254, 0.4);
+}
+
+.pulse-anim {
+    animation: pulseGlow 2s infinite alternate;
+}
+
+@keyframes pulseGlow {
+    0% {
+        text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+        transform: scale(1);
+    }
+
+    100% {
+        text-shadow: 0 0 40px rgba(0, 242, 254, 0.8), 0 0 80px rgba(0, 242, 254, 0.4);
+        transform: scale(1.05);
+    }
 }
 
 .subtitle {
@@ -82,6 +257,46 @@ html {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.9);
     font-weight: 400;
+}
+
+/* --- Loading Screen Overlay --- */
+#loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #050505;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    transition: opacity 1s ease-out;
+}
+
+.loader-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.loading-bar-container {
+    width: 300px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin: 20px 0;
+    overflow: hidden;
+}
+
+.loading-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #00f2fe, #4facfe);
+    box-shadow: 0 0 10px #00f2fe;
+    transition: width 0.3s ease;
 }
 
 .icon {
@@ -143,6 +358,20 @@ kbd {
 
     100% {
         transform: scale(1);
+    }
+}
+
+@keyframes pulseRecord {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 68, 68, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(255, 68, 68, 0.8);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(255, 68, 68, 0.4);
     }
 }
 

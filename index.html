@@ -22,6 +22,10 @@
             <p class="instruction">
                 <span class="icon">⌨️</span> Or use keyboard numbers <span class="highlight">[1-8]</span>
             </p>
+            <p class="instruction" style="font-size: 0.8rem; margin-top: 5px;">
+                <span class="icon">🦶</span> Foot Pedal: <span class="highlight">Spacebar</span> or <span
+                    class="highlight">VR Trigger</span>
+            </p>
         </div>
 
         <div class="glass-panel controls-panel">
@@ -36,6 +40,103 @@
                 <div class="key-item"><kbd>7</kbd> Crash</div>
                 <div class="key-item"><kbd>8</kbd> Ride</div>
             </div>
+        </div>
+
+        <div class="glass-panel tool-panel">
+            <h3>Metronome</h3>
+            <div class="tools-layout">
+                <div class="tool-group">
+                    <label>BPM: <span id="bpm-display">120</span></label>
+                    <input type="range" id="bpm-slider" min="60" max="240" step="1" value="120">
+                </div>
+                <button id="metro-btn" class="action-btn">Start Metronome</button>
+                <div id="metro-light" class="indicator-light"></div>
+            </div>
+        </div>
+
+        <div class="glass-panel tool-panel">
+            <h3>Recording Studio</h3>
+            <div class="tools-layout">
+                <button id="record-btn" class="action-btn record">⏺ Start Recording</button>
+                <button id="replay-btn" class="action-btn" disabled>▶ Replay</button>
+                <button id="download-btn" class="action-btn" disabled>⬇ Download WAV</button>
+                <div id="record-light" class="indicator-light"></div>
+            </div>
+        </div>
+
+        <div class="glass-panel tool-panel">
+            <h3>Customization</h3>
+            <div class="tools-layout">
+                <div class="tool-group">
+                    <label>Environment Theme</label>
+                    <select id="theme-select" class="styled-select">
+                        <option value="classic">Classic Studio</option>
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="dark">Dark Mode</option>
+                        <option value="arcade">Arcade Neon</option>
+                    </select>
+                </div>
+                <div class="tool-group">
+                    <label>Drum Kit Sound</label>
+                    <select id="kit-select" class="styled-select">
+                        <option value="rock">Rock Kit</option>
+                        <option value="jazz">Jazz Kit</option>
+                        <option value="electronic">Electronic Kit</option>
+                        <option value="trap808">808 Trap Kit</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel tool-panel highlight-panel">
+            <h3>AI Drum Trainer</h3>
+            <div class="tools-layout">
+                <p class="subtitle" style="margin-bottom: 5px;" id="trainer-status">Waiting to start...</p>
+                <div class="trainer-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">Score</span>
+                        <span class="stat-value" id="trainer-score">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Streak</span>
+                        <span class="stat-value" id="trainer-streak">0</span>
+                    </div>
+                </div>
+                <button id="trainer-btn" class="action-btn">🎮 Start Training</button>
+            </div>
+        </div>
+
+        <div class="glass-panel tool-panel highlight-panel" id="analytics-panel"
+            style="display: none; margin-top: 15px;">
+            <h3>Session Analytics</h3>
+            <div class="tools-layout">
+                <div class="trainer-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">HPM</span>
+                        <span class="stat-value" id="stat-hpm">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Max Vel.</span>
+                        <span class="stat-value" id="stat-vel">0</span>
+                    </div>
+                </div>
+                <div class="stat-box" style="width: 100%; margin-top: 5px;">
+                    <span class="stat-label">Total Hits</span>
+                    <span class="stat-value" id="stat-total">0</span>
+                </div>
+                <button id="close-analytics-btn" class="action-btn" style="margin-top: 10px;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen Overlay -->
+    <div id="loading-screen">
+        <div class="loader-content">
+            <h1 class="glow-text pulse-anim">NEON BEATS VR</h1>
+            <div class="loading-bar-container">
+                <div id="loading-bar" class="loading-bar"></div>
+            </div>
+            <p id="loading-text" class="subtitle">Initializing Audio Engine...</p>
         </div>
     </div>
 
@@ -65,14 +166,27 @@
             <a-plane position="0 4 2" rotation="90 0 0" width="12" height="12" color="#0a0a0a"></a-plane>
 
             <!-- Acoustic Foam Panels (Back Wall) -->
-            <a-box position="-2 2 -3.95" width="1.5" height="2" depth="0.1" color="#333333" roughness="1"></a-box>
-            <a-box position="0 2 -3.95" width="1.5" height="2" depth="0.1" color="#222222" roughness="1"></a-box>
-            <a-box position="2 2 -3.95" width="1.5" height="2" depth="0.1" color="#333333" roughness="1"></a-box>
+            <a-box class="visualizer-bar" position="-2 2 -3.95" width="1.5" height="2" depth="0.1" color="#333333"
+                roughness="1"></a-box>
+            <a-box class="visualizer-bar" position="0 2 -3.95" width="1.5" height="2" depth="0.1" color="#222222"
+                roughness="1"></a-box>
+            <a-box class="visualizer-bar" position="2 2 -3.95" width="1.5" height="2" depth="0.1" color="#333333"
+                roughness="1"></a-box>
 
             <!-- Neon Sign -->
             <a-entity position="0 3 -3.9"
                 text="value: ON AIR; color: #ff3333; width: 8; align: center; font: kelsonsans;"></a-entity>
             <a-light type="point" position="0 3 -3.5" color="#ffaaaa" intensity="0.5" distance="4"></a-light>
+
+            <!-- Moving Stage Lights -->
+            <a-light type="spot" id="stage-light-1" position="-4 4 -2" rotation="-45 45 0" angle="30" penumbra="0.8"
+                intensity="0" color="#ff00ff" distance="10"></a-light>
+            <a-light type="spot" id="stage-light-2" position="4 4 -2" rotation="-45 -45 0" angle="30" penumbra="0.8"
+                intensity="0" color="#00ffff" distance="10"></a-light>
+
+            <!-- Audio Visualizer Setup -->
+            <!-- 360 degree visualizer rings around the player -->
+            <a-entity id="visualizer-rings" position="0 0.1 0"></a-entity>
         </a-entity>
 
         <!-- Player Rig -->
