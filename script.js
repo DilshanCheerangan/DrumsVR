@@ -498,6 +498,17 @@ const downloadRecording = () => {
 
 // UI Initialization
 window.addEventListener('DOMContentLoaded', () => {
+    // Mobile UI Toggle
+    const toggleUiBtn = document.getElementById('toggle-ui-btn');
+    const uiContainer = document.getElementById('ui-container');
+    let uiVisible = true;
+    if (toggleUiBtn) {
+        toggleUiBtn.addEventListener('click', () => {
+            uiVisible = !uiVisible;
+            if (uiContainer) uiContainer.style.display = uiVisible ? 'flex' : 'none';
+        });
+    }
+
     // Metronome
     const metroBtn = document.getElementById('metro-btn');
     const bpmSlider = document.getElementById('bpm-slider');
@@ -763,6 +774,57 @@ AFRAME.registerComponent('drum', {
                 startEvents: 'drum-hit'
             });
         }
+
+        // Add mobile Touch/Click Event Listener
+        this.el.addEventListener('mousedown', (evt) => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            let velocityVolume = 1.0; // Max velocity for screen tap
+
+            // Mobile Touch Simulation: Use hit position to simulate velocity
+            // Tapping the exact center is 1.0 (loud), tapping the edge is 0.3 (soft)
+            if (evt.detail && evt.detail.intersection) {
+                const intersectWorld = evt.detail.intersection.point.clone();
+                const localPos = this.el.object3D.worldToLocal(intersectWorld);
+                const distFromCenter = Math.sqrt(localPos.x * localPos.x + localPos.z * localPos.z);
+
+                const normalizedDist = Math.max(0, Math.min(distFromCenter / this.data.hitRadius, 1.0));
+
+                // Map the distance so center = 1.0 velocity, and edge = 0.3 velocity
+                velocityVolume = 0.3 + ((1.0 - normalizedDist) * 0.7);
+            }
+
+            const drumPos = new THREE.Vector3();
+            this.el.object3D.getWorldPosition(drumPos);
+
+            // Check for Rimshot (edge of snare)
+            let isRimshot = (this.data.type === 'snare' && velocityVolume < 0.45);
+
+            playSound(this.data.type, velocityVolume, drumPos, isRimshot);
+
+            if (!sessionStartTime) sessionStartTime = Date.now();
+            sessionHits++;
+            sessionMaxVel = Math.max(sessionMaxVel, velocityVolume);
+
+            handleUserHit(this.data.type);
+
+            this.el.emit('drum-hit', null, false);
+            this.el.object3D.scale.set(1, 1, 1);
+
+            let fxColor = '#4facfe'; // Default cyan
+            if (this.data.type === 'crash' || this.data.type === 'ride' || this.data.type === 'hihat') {
+                fxColor = '#ffdd44'; // Gold for cymbals
+            } else if (this.data.type === 'kick') {
+                fxColor = '#ff4444'; // Red for kick
+            }
+
+            // Highlight exactly where they tapped
+            if (evt.detail && evt.detail.intersection) {
+                createHitEffect(evt.detail.intersection.point, fxColor);
+            } else {
+                createHitEffect(drumPos, fxColor);
+            }
+        });
     },
     tick: function (time, delta) {
         if (!this.sticks || this.sticks.length === 0) {

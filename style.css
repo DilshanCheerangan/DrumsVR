@@ -41,6 +41,7 @@ html {
     color: white;
     animation: fadeInSlide 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     opacity: 0;
+    pointer-events: auto;
 }
 
 .main-panel {
@@ -379,5 +380,56 @@ kbd {
     to {
         opacity: 1;
         transform: translateX(0);
+    }
+}
+
+/* --- Mobile Responsive Design --- */
+@media (max-width: 768px) {
+    #ui-container {
+        padding: 5px;
+        width: 100%;
+        max-height: 100vh;
+        overflow-y: auto;
+        pointer-events: none;
+        /* Let clicks pass through empty areas */
+    }
+
+    #ui-container::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    #ui-container::-webkit-scrollbar-thumb {
+        background: #4facfe;
+        border-radius: 2px;
+    }
+
+    .glass-panel {
+        max-width: 100%;
+        transform: translateX(0);
+        margin: 0 0 10px 0;
+        padding: 15px;
+        pointer-events: auto;
+        /* Catch clicks on the panels themselves */
+    }
+
+    .main-panel,
+    .controls-panel,
+    .tool-panel {
+        max-width: 100%;
+        transform: none;
+    }
+
+    .controls-panel {
+        display: none;
+        /* Hide keyboard controls on mobile */
+    }
+
+    .glow-text {
+        font-size: 1.5rem;
+    }
+
+    h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
     }
 }

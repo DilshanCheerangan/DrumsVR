@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VR Drum Set Simulator</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -11,6 +11,9 @@
 </head>
 
 <body>
+    <button id="toggle-ui-btn" class="action-btn"
+        style="position: absolute; top: 15px; right: 15px; width: auto; z-index: 10001; pointer-events: auto; padding: 8px 12px; font-size: 0.9rem; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">👁
+        Toggle UI</button>
     <div id="ui-container">
         <div class="glass-panel main-panel">
             <h1 class="glow-text">NEON BEATS VR</h1>
@@ -140,7 +143,8 @@
         </div>
     </div>
 
-    <a-scene background="color: #050505" renderer="antialias: true; colorManagement: true">
+    <a-scene background="color: #050505" renderer="antialias: true; colorManagement: true"
+        cursor="rayOrigin: mouse; fuse: false" raycaster="objects: [drum]">
 
         <!-- Environment Lighting -->
         <a-light type="ambient" color="#222"></a-light>
